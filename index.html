@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Envelope Budget</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap">
+<style>
+:root{--bg:#f3f5f4;--card:#fff;--ink:#14231f;--mute:#5d6e68;--line:#dbe3e0;--acc:#0f6b5a;--acc2:#e8f3f0;--cash:#9a5b00;--cashbg:#fbf0dc;--on:#1d4f9c;--onbg:#e4edfb;--bad:#b3261e;--warn:#fff4d6;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1715;--card:#18221f;--ink:#e6efec;--mute:#92a59f;--line:#2a3833;--acc:#4fc3a8;--acc2:#1b2e29;--cash:#f0b45a;--cashbg:#33280f;--on:#8db4f2;--onbg:#172640;--bad:#ff8a80;--warn:#3a3213}}
+:root[data-theme="dark"]{--bg:#0f1715;--card:#18221f;--ink:#e6efec;--mute:#92a59f;--line:#2a3833;--acc:#4fc3a8;--acc2:#1b2e29;--cash:#f0b45a;--cashbg:#33280f;--on:#8db4f2;--onbg:#172640;--bad:#ff8a80;--warn:#3a3213}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 'Instrument Sans',system-ui,-apple-system,'Segoe UI',sans-serif}
+main{max-width:980px;margin:0 auto;padding:16px 14px 60px}
+h1{font-size:26px;margin:6px 0 2px;letter-spacing:-.02em}
+h2{font-size:17px;margin:0 0 10px}
+.sub{color:var(--mute);margin:0 0 14px}
+nav{display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--line);margin-bottom:16px}
+nav button{background:none;border:0;border-bottom:3px solid transparent;padding:10px 12px;font:inherit;font-weight:500;color:var(--mute);cursor:pointer;white-space:nowrap}
+nav button.on{color:var(--acc);border-color:var(--acc)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.big{font-size:30px;font-weight:700;letter-spacing:-.02em}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sp{justify-content:space-between}
+.mute{color:var(--mute)}.bad{color:var(--bad)}
+.chip{font-size:12px;font-weight:600;padding:2px 8px;border-radius:99px}
+.chip.cash{background:var(--cashbg);color:var(--cash)}.chip.online{background:var(--onbg);color:var(--on)}.chip.ws{background:var(--acc2);color:var(--acc)}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:7px 6px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-size:12.5px;color:var(--mute);font-weight:600}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.wrap{overflow-x:auto}
+input,select,button.b{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:7px;padding:7px 9px;min-height:36px}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+input[type=number]{width:90px}
+label{display:flex;flex-direction:column;gap:3px;font-size:13px;color:var(--mute);font-weight:500;flex:1;min-width:140px}
+button.b{cursor:pointer;font-weight:600}
+button.b.p{background:var(--acc);color:var(--card);border-color:var(--acc)}
+button.b.x{color:var(--bad);padding:4px 8px;min-height:30px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:12px}
+.seg button{border:0;background:var(--card);color:var(--mute);padding:8px 16px;font:inherit;font-weight:600;cursor:pointer}
+.seg button.on{background:var(--acc);color:var(--card)}
+.bar{height:7px;background:var(--line);border-radius:4px;overflow:hidden;min-width:70px}
+.bar i{display:block;height:100%;background:var(--acc)}.bar i.over{background:var(--bad)}
+.note{background:var(--warn);border-radius:8px;padding:8px 10px;margin:8px 0;font-size:14px}
+.split{margin:6px 0 0 14px;padding-left:10px;border-left:2px solid var(--acc2)}
+.empty{color:var(--mute);padding:18px;text-align:center}
+</style></head><body><main>
+<h1>Envelope Budget</h1>
+<p class="sub">Personal and business money, split by percentage, tracked as cash or online.</p>
+<div id="st" class="mute" style="font-size:13px;margin:-6px 0 10px"></div><nav id="nav"></nav><div id="view"></div>
+</main>
+<script>
+const KEY='envelope-budget-v1';
+const uid=()=>Math.random().toString(36).slice(2,9);
+const seed=()=>{const A=[['Cash','cash','shared',167.66],['A41','online','biz',54.07],['Salaries Account','online','biz',-15.36],['Debt Account','online','biz',39],['Job Checking','online','per',46.54],['Adelfi Checking','online','per',810.50],['Adelfi Savings','online','per',902.52],['LCEF Savings','online','per',0],['Special','online','per',397.52],['Investments','online','per',0]].map(a=>({id:uid(),name:a[0],kind:a[1],ws:a[2],start:a[3]}));
+const id=n=>A.find(a=>a.name==n).id;
+const B=(n,p,...s)=>({id:uid(),name:n,pct:p,splits:s.map(x=>({a:id(x),p:100/s.length}))});
+const M=(n,k,b)=>({id:uid(),name:n,kind:k,buckets:b});const bo=M('Online','online',[B('Resources',60,'A41'),B('Salaries',15,'Salaries Account'),B('Tithe',10,'Special'),B('Debt',5,'Debt Account'),B('Misc',10,'A41')]);const bc=M('Cash','cash',[B('Resources',60,'Cash'),B('Salaries',15,'Cash'),B('Tithe',10,'Cash'),B('Debt',5,'Cash'),B('Misc',10,'Cash')]);const po=M('Online','online',[B('Spend',50,'Adelfi Checking'),B('Tithe',20,'Special'),B('Save',30,'Adelfi Savings')]);return{accts:A,tx:[],ws:{biz:{name:'Business',budgets:[bo,bc],cur:bo.id},per:{name:'Personal',budgets:[po],cur:po.id}}}};
+let S;try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+function migrate(){for(const w of ['biz','per']){const W=S.ws[w];if(!W.budgets){const b={id:uid(),name:'Online',kind:'online',buckets:W.buckets||[]};W.budgets=[b];delete W.buckets;W.cur=b.id;S.tx.forEach(t=>{if(t.ws==w&&!t.bd)t.bd=b.id})}if(!W.cur||!W.budgets.some(b=>b.id==W.cur))W.cur=W.budgets[0].id}}
+if(!S||!S.accts)S=seed();migrate();
+let unlocked=false,pend='';
+const save=()=>{S._u=Date.now();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}schedule()};
+const backupText=()=>{const o=JSON.parse(JSON.stringify(S));delete o._u;return JSON.stringify(o,null,1)};
+async function hash(p,salt){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(salt+p));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
+const G={cid:'',tok:null,exp:0,fid:null,on:false,t:null,busy:false,again:false,msg:''};
+try{G.cid=localStorage.getItem('envelope-gcid')||'';G.on=localStorage.getItem('envelope-gon')=='1'}catch(e){}
+const setSt=t=>{G.msg=t;['st','gst'].forEach(i=>{const e=document.getElementById(i);if(e)e.textContent=t})};
+function schedule(){if(!G.on)return;setSt('Saving\u2026');clearTimeout(G.t);G.t=setTimeout(()=>sync(false),1200)}
+function gsi(){return window.google&&google.accounts?Promise.resolve():new Promise((ok,no)=>{const e=document.createElement('script');e.src='https://accounts.google.com/gsi/client';e.onload=ok;e.onerror=()=>no(new Error('Could not load Google sign-in'));document.head.appendChild(e)})}
+async function token(interactive){if(G.tok&&Date.now()<G.exp-60000)return G.tok;if(!G.cid)throw new Error('Add your Google client ID first');await gsi();return new Promise((ok,no)=>{const tc=google.accounts.oauth2.initTokenClient({client_id:G.cid,scope:'https://www.googleapis.com/auth/drive.appdata',callback:r=>{if(r.error)return no(new Error(r.error));G.tok=r.access_token;G.exp=Date.now()+(r.expires_in||3600)*1000;ok(G.tok)},error_callback:e=>no(new Error(e.type||'sign-in was closed'))});tc.requestAccessToken({prompt:interactive?'':'none'})})}
+async function gf(url,o,retry=true){o=o||{};const t=await token(false);const r=await fetch(url,{...o,headers:{...(o.headers||{}),Authorization:'Bearer '+t}});if(r.status==401&&retry){G.tok=null;return gf(url,o,false)}if(!r.ok)throw new Error('Google Drive error '+r.status);return r}
+async function remote(){const r=await gf('https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&fields=files(id)&q='+encodeURIComponent("name='envelope-budget.json'"));const j=await r.json();G.fid=j.files&&j.files[0]?j.files[0].id:null;if(!G.fid)return null;return (await gf('https://www.googleapis.com/drive/v3/files/'+G.fid+'?alt=media')).json()}
+async function upload(){const body=JSON.stringify({u:S._u,data:JSON.parse(backupText())});if(G.fid){await gf('https://www.googleapis.com/upload/drive/v3/files/'+G.fid+'?uploadType=media',{method:'PATCH',headers:{'Content-Type':'application/json'},body})}else{const b='eb'+uid(),m=JSON.stringify({name:'envelope-budget.json',parents:['appDataFolder']});const r=await gf('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',{method:'POST',headers:{'Content-Type':'multipart/related; boundary='+b},body:'--'+b+'\r\nContent-Type: application/json\r\n\r\n'+m+'\r\n--'+b+'\r\nContent-Type: application/json\r\n\r\n'+body+'\r\n--'+b+'--'});G.fid=(await r.json()).id}}
+async function sync(interactive){if(G.busy){G.again=true;return}G.busy=true;try{if(interactive)await token(true);setSt('Syncing\u2026');const r=await remote(),lu=S._u||0;if(r&&r.data&&r.data.accts&&r.u>lu){S=r.data;S._u=r.u;migrate();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}render()}else if(!r||lu>r.u){if(!S._u)S._u=Date.now();await upload()}setSt('\u2601 Synced with Google Drive at '+new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}))}catch(e){setSt('Not synced: '+(e.message||'error')+'. Press Sync now to reconnect. Your data is safe on this device.')}G.busy=false;if(G.again){G.again=false;schedule()}}
+function gconnect(){if(!G.cid){setSt('Paste your Google client ID first.');return}G.on=true;try{localStorage.setItem('envelope-gon','1')}catch(e){}sync(true)}
+function gdisc(){G.on=false;try{localStorage.setItem('envelope-gon','0')}catch(e){}try{if(G.tok)google.accounts.oauth2.revoke(G.tok)}catch(e){}G.tok=null;setSt('Drive sync is off. Your data stays on this device and in your Drive.')}
+function gInit(){if(G.on&&G.cid){setSt('Reconnecting to Google Drive\u2026');sync(false)}else setSt('Saved on this device only.');document.addEventListener('visibilitychange',()=>{if(!document.hidden&&G.on)sync(false)})}
+async function saveTxt(){const txt=backupText(),name='budget-backup-'+today()+'.txt',m=$('#bkm');$('#bk').value=txt;
+ try{if(window.showSaveFilePicker){const h=await showSaveFilePicker({suggestedName:name,types:[{description:'Text file',accept:{'text/plain':['.txt']}}]});const w=await h.createWritable();await w.write(txt);await w.close();m.textContent='Saved to the location you chose.';return}}catch(e){if(e&&e.name=='AbortError'){m.textContent='Save cancelled.';return}}
+ try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'text/plain'}));a.download=name;document.body.appendChild(a);a.click();a.remove();m.textContent='Sent '+name+' to your browser downloads. This browser cannot pick a folder; turn on "ask where to save" in its settings, or copy the text shown above.'}catch(e){m.textContent='Could not create a file here. Copy the text shown above instead.'}}
+function restoreTxt(){const m=$('#bkm');let v=$('#bk').value.trim();const i=v.indexOf('{');v=i<0?'':v.slice(i);let j;try{j=JSON.parse(v);if(!j.accts||!j.ws)throw 0}catch(e){m.textContent='That text is not a valid backup. Paste the full backup text and try again.';return}
+ if(pend!=v){pend=v;m.textContent='This replaces everything currently in the app. Press Restore from text again to confirm.';return}
+ S=j;migrate();pend='';save();render();$('#bkm').textContent='Backup restored.'}
+const lockHtml=()=>'<div class="card" style="max-width:360px;margin:30px auto"><h2>Enter passcode</h2><div class="row"><input type="password" id="pw" autocomplete="current-password" style="flex:1"><button class="b p" data-unlock>Unlock</button></div><p id="pwe" class="bad"></p></div>';
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const $=s=>document.querySelector(s);
+const money=n=>(n<0?'−':'')+'$'+Math.abs(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+const r2=n=>Math.round(n*100)/100;
+const acct=i=>S.accts.find(a=>a.id==i);
+const WB=w=>{const W=S.ws[w];return W.budgets.find(b=>b.id==W.cur)||W.budgets[0]};
+const mv=(arr,i,d)=>{const j=i+d;if(i<0||j<0||j>=arr.length)return;[arr[i],arr[j]]=[arr[j],arr[i]]};
+const switcher=(w,act)=>{const W=S.ws[w];return '<div class="seg" style="margin:0">'+W.budgets.map(b=>`<button class="${b.id==W.cur?'on':''}" data-${act}="${w}|${b.id}">${esc(b.name)}</button>`).join('')+'</div>'};
+const bdName=t=>{const b=t.ws&&S.ws[t.ws].budgets.find(x=>x.id==t.bd);return b?' ('+b.name+')':''};
+const aname=i=>acct(i)?acct(i).name:'(deleted)';
+const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+let tab='over',period='all',type='income',f={ws:'per',date:today()};
+const TABS=[['over','Overview'],['add','Add money'],['bud','Budgets'],['acc','Accounts'],['led','Ledger']];
+
+function balance(a){let b=+a.start||0;for(const t of S.tx){if(t.type=='income'&&t.a==a.id)b+=t.amt;if(t.type=='expense'&&t.a==a.id)b-=t.amt;if(t.type=='transfer'){if(t.a==a.id)b-=t.amt;if(t.to==a.id)b+=t.amt}}return r2(b)}
+const inPeriod=t=>period=='all'||t.date.startsWith(period);
+function allocate(ws,amt){const o=[];for(const b of WB(ws).buckets)for(const s of b.splits)o.push({bucket:b.name,a:s.a,amt:r2(amt*b.pct/100*s.p/100)});return o}
+const acctOpts=(sel,filter)=>S.accts.filter(filter||(()=>1)).map(a=>`<option value="${a.id}" ${a.id==sel?'selected':''}>${esc(a.name)} (${a.kind})</option>`).join('');
+const kindChip=k=>`<span class="chip ${k}">${k=='cash'?'Cash':'Online'}</span>`;
+const wsLabel=w=>w=='shared'?'Shared':S.ws[w].name;
+
+function nav(){$('#nav').innerHTML=TABS.map(t=>`<button class="${t[0]==tab?'on':''}" data-tab="${t[0]}">${t[1]}</button>`).join('')}
+function render(){nav();if(S.lock&&!unlocked){$('#nav').innerHTML='';$('#view').innerHTML=lockHtml();return}$('#view').innerHTML=({over,add,bud,acc,led})[tab]();preview();setSt(G.msg||'')}
+
+function over(){
+ const months=[...new Set(S.tx.map(t=>t.date.slice(0,7)))].sort().reverse();
+ const cash=S.accts.filter(a=>a.kind=='cash').reduce((s,a)=>s+balance(a),0),on=S.accts.filter(a=>a.kind=='online').reduce((s,a)=>s+balance(a),0);
+ let h=`<div class="row sp" style="margin-bottom:12px"><label style="max-width:200px">Budget period<select data-period>${['all',...months].map(m=>`<option value="${m}" ${m==period?'selected':''}>${m=='all'?'All time':m}</option>`).join('')}</select></label></div>
+ <div class="grid"><div class="card"><div class="mute">Total money</div><div class="big">${money(cash+on)}</div></div>
+ <div class="card"><div class="mute">Cash on hand</div><div class="big" style="color:var(--cash)">${money(cash)}</div></div>
+ <div class="card"><div class="mute">Online</div><div class="big" style="color:var(--on)">${money(on)}</div></div></div>`;
+ h+='<div class="grid">';
+ for(const w of ['biz','per']){const W=S.ws[w],BD=WB(w);
+  const inc=S.tx.filter(t=>t.ws==w&&t.bd==BD.id&&t.type=='income'&&inPeriod(t));
+  const rows=BD.buckets.map(b=>{const al=inc.filter(t=>t.bucket==b.name).reduce((s,t)=>s+t.amt,0);const sp=S.tx.filter(t=>t.ws==w&&t.bd==BD.id&&t.type=='expense'&&t.bucket==b.name&&inPeriod(t)).reduce((s,t)=>s+t.amt,0);const pc=al?Math.min(100,sp/al*100):(sp?100:0);
+   return `<tr><td>${esc(b.name)} <span class="mute">${b.pct}%</span></td><td class="n">${money(al)}</td><td class="n">${money(sp)}</td><td class="n ${al-sp<0?'bad':''}">${money(al-sp)}</td><td><div class="bar"><i class="${sp>al?'over':''}" style="width:${pc}%"></i></div></td></tr>`}).join('');
+  const tot=inc.reduce((s,t)=>s+t.amt,0);
+  h+=`<div class="card"><div class="row sp"><h2>${esc(W.name)}</h2>${switcher(w,'sw')}</div><div class="wrap"><table><tr><th>Envelope</th><th class="n">Funded</th><th class="n">Spent</th><th class="n">Left</th><th></th></tr>${rows||'<tr><td colspan=5 class="empty">No envelopes yet.</td></tr>'}</table></div><p class="mute" style="margin:8px 0 0">Income distributed this period: ${money(tot)}</p></div>`}
+ h+='</div><div class="card"><h2>Accounts</h2><div class="wrap"><table><tr><th>Account</th><th>Type</th><th>Belongs to</th><th class="n">Balance</th></tr>'+S.accts.map(a=>`<tr><td>${esc(a.name)}</td><td>${kindChip(a.kind)}</td><td><span class="chip ws">${esc(wsLabel(a.ws))}</span></td><td class="n ${balance(a)<0?'bad':''}">${money(balance(a))}</td></tr>`).join('')+'</table></div></div>';
+ return h}
+
+function add(){
+ const W=WB(f.ws in S.ws?f.ws:'per');
+ let h=`<div class="card"><div class="seg">${['income','expense','transfer'].map(t=>`<button class="${t==type?'on':''}" data-type="${t}">${t[0].toUpperCase()+t.slice(1)}</button>`).join('')}</div><div class="row">`;
+ const common=`<label>Date<input type="date" data-f="date" value="${f.date}"></label><label>Description<input data-f="desc" value="${esc(f.desc||'')}" placeholder="${type=='income'?'e.g. Paycheck':type=='expense'?'e.g. School supplies':'e.g. Move cash to bank'}"></label><label>Amount<input type="number" step="0.01" min="0" data-f="amt" value="${f.amt||''}"></label>`;
+ if(type=='income'){h+=`<label>Money goes to<select data-f="ws"><option value="per" ${f.ws=='per'?'selected':''}>Personal budget</option><option value="biz" ${f.ws=='biz'?'selected':''}>Business budget</option></select></label><label>Budget<div>${switcher(f.ws,'sw')}</div></label>${common}</div><div id="prev"></div><div class="row" style="margin-top:10px"><button class="b p" data-save>Split and save income</button></div>`}
+ else if(type=='expense'){if(!f.bucket||!W.buckets.some(b=>b.name==f.bucket))f.bucket=W.buckets[0]?W.buckets[0].name:'';if(!f.a)f.a=S.accts[0].id;
+  h+=`<label>Budget<select data-f="ws"><option value="per" ${f.ws=='per'?'selected':''}>Personal</option><option value="biz" ${f.ws=='biz'?'selected':''}>Business</option></select></label><label>Budget<div>${switcher(f.ws,'sw')}</div></label><label>Envelope<select data-f="bucket">${W.buckets.map(b=>`<option ${b.name==f.bucket?'selected':''}>${esc(b.name)}</option>`).join('')}</select></label><label>Paid from<select data-f="a">${acctOpts(f.a)}</select></label>${common}</div><div class="row" style="margin-top:10px"><button class="b p" data-save>Save expense</button></div>`}
+ else{if(!f.a)f.a=S.accts[0].id;if(!f.to)f.to=(S.accts[1]||S.accts[0]).id;
+  h+=`<label>From<select data-f="a">${acctOpts(f.a)}</select></label><label>To<select data-f="to">${acctOpts(f.to)}</select></label>${common}</div><p class="mute">Use this to move money between cash and online accounts, or between any two accounts.</p><div class="row"><button class="b p" data-save>Save transfer</button></div>`}
+ return h+'</div>'}
+function preview(){const p=$('#prev');if(!p||type!='income')return;const amt=+f.amt||0;const W=WB(f.ws);const tp=W.buckets.reduce((s,b)=>s+b.pct,0);
+ const rows=allocate(f.ws,amt);p.innerHTML=`<div class="wrap"><table><tr><th>Envelope</th><th>Lands in</th><th class="n">Amount</th></tr>${rows.map(r=>`<tr><td>${esc(r.bucket)}</td><td>${esc(aname(r.a))} ${acct(r.a)?kindChip(acct(r.a).kind):''}</td><td class="n">${money(r.amt)}</td></tr>`).join('')}</table></div>${Math.round(tp)!=100?`<div class="note">Your percentages add up to ${tp}%, so ${money(amt-rows.reduce((s,r)=>s+r.amt,0))} will stay unassigned. Fix it on the Budgets tab.</div>`:''}`}
+
+function bud(){let h='<p class="sub">Change any percentage and everything recalculates. Each envelope can send its share to several accounts.</p><div class="grid">';
+ for(const w of ['biz','per']){const W0=S.ws[w],W=WB(w),tp=r2(W.buckets.reduce((s,b)=>s+b.pct,0));
+  h+=`<div class="card"><div class="row sp"><h2>${esc(W0.name)}</h2>${switcher(w,'sw')}</div><div class="row" style="margin:6px 0"><input data-wn="${w}" value="${esc(W.name)}" aria-label="Budget name" style="flex:1;min-width:110px"><select data-wk="${w}" aria-label="Budget type"><option value="online" ${W.kind=='online'?'selected':''}>Online</option><option value="cash" ${W.kind=='cash'?'selected':''}>Cash</option></select><button class="b x" data-mvbd="${w}|-1" aria-label="Move budget left">◀</button><button class="b x" data-mvbd="${w}|1" aria-label="Move budget right">▶</button></div><div class="row"><button class="b" data-addbd="${w}">+ Copy as new budget</button>${W0.budgets.length>1?`<button class="b x" data-delbd="${w}">Delete budget</button>`:''}</div><div class="row sp" style="margin-top:8px"><span class="mute">Envelopes</span><b class="${tp!=100?'bad':''}">${tp}% of 100%</b></div>`;
+  if(tp!=100)h+=`<div class="note">Percentages should total 100%. ${tp<100?(100-tp)+'% is unassigned.':(tp-100)+'% is over-allocated.'}</div>`;
+  for(const b of W.buckets){const sp=r2(b.splits.reduce((s,x)=>s+x.p,0));
+   h+=`<div style="padding:10px 0;border-top:1px solid var(--line)"><div class="row"><input data-bn="${w}|${b.id}" value="${esc(b.name)}" style="flex:1;min-width:110px;font-weight:600"><input type="number" step="0.5" min="0" max="100" data-bp="${w}|${b.id}" value="${b.pct}"><span>%</span><button class="b x" data-mvb="${w}|${b.id}|-1" aria-label="Move up">▲</button><button class="b x" data-mvb="${w}|${b.id}|1" aria-label="Move down">▼</button><button class="b x" data-delb="${w}|${b.id}" aria-label="Delete envelope">Delete</button></div><div class="split">`;
+   h+=b.splits.map((s,i)=>`<div class="row" style="margin-bottom:4px"><span class="mute">→</span><select data-sa="${w}|${b.id}|${i}" style="flex:1;min-width:120px">${acctOpts(s.a)}</select><input type="number" step="1" min="0" max="100" data-sp="${w}|${b.id}|${i}" value="${r2(s.p)}" style="width:72px"><span>%</span>${b.splits.length>1?`<button class="b x" data-mvs="${w}|${b.id}|${i}|-1" aria-label="Move up">▲</button><button class="b x" data-mvs="${w}|${b.id}|${i}|1" aria-label="Move down">▼</button>`:''}${b.splits.length>1?`<button class="b x" data-dels="${w}|${b.id}|${i}" aria-label="Remove account">×</button>`:''}</div>`).join('');
+   h+=`<div class="row"><button class="b" data-adds="${w}|${b.id}">+ Sub-account</button>${sp!=100?`<span class="bad">Splits total ${sp}%</span>`:''}</div></div></div>`}
+  h+=`<button class="b p" data-addb="${w}">+ Add envelope</button></div>`}
+ return h+'</div>'}
+
+function acc(){return `<div class="card"><h2>Accounts</h2><div class="wrap"><table><tr><th>Name</th><th>Type</th><th>Belongs to</th><th class="n">Starting balance</th><th class="n">Now</th><th></th></tr>${S.accts.map(a=>`<tr><td><input data-an="${a.id}" value="${esc(a.name)}" style="min-width:120px"></td><td><select data-ak="${a.id}"><option value="online" ${a.kind=='online'?'selected':''}>Online</option><option value="cash" ${a.kind=='cash'?'selected':''}>Cash</option></select></td><td><select data-aw="${a.id}">${[['per','Personal'],['biz','Business'],['shared','Shared']].map(x=>`<option value="${x[0]}" ${a.ws==x[0]?'selected':''}>${x[1]}</option>`).join('')}</select></td><td class="n"><input type="number" step="0.01" data-as="${a.id}" value="${a.start}"></td><td class="n">${money(balance(a))}</td><td style="white-space:nowrap"><button class="b x" data-mva="${a.id}|-1" aria-label="Move up">▲</button><button class="b x" data-mva="${a.id}|1" aria-label="Move down">▼</button><button class="b x" data-dela="${a.id}">Delete</button></td></tr>`).join('')}</table></div>
+ <div class="row" style="margin-top:10px"><button class="b p" data-adda>+ Add account</button></div></div>
+ <div class="card"><h2>Google Drive sync</h2><p class="mute">Keeps one copy of your budget in a private, hidden app folder in your own Google Drive and updates it whenever you edit. Open the app on another device, connect, and your budget loads there. If two devices edit at once, the newest edit wins.</p><label>Google client ID<input data-gcid value="${esc(G.cid)}" placeholder="1234567890-abc.apps.googleusercontent.com" autocomplete="off"></label><div class="row" style="margin-top:8px"><button class="b p" data-gcon>${G.on?'Reconnect':'Connect Google Drive'}</button><button class="b" data-gnow>Sync now</button>${G.on?'<button class="b x" data-gdis>Turn off</button>':''}</div><p id="gst" class="mute" role="status"></p><details><summary>One-time setup</summary><ol class="mute"><li>In Google Cloud Console (console.cloud.google.com), create a project and enable the Google Drive API.</li><li>Under OAuth consent screen, choose External, fill in the basics, and add your own Google account as a test user.</li><li>Under Credentials, create an OAuth client ID of type Web application. Under Authorized JavaScript origins, add the exact address where you host this app, for example https://yourname.github.io. Google does not accept a file opened from your disk, so the app must be hosted (GitHub Pages, Netlify and Cloudflare Pages are free). For testing on your own computer, http://localhost:8000 also works.</li><li>Paste the client ID above and press Connect. While the consent screen is in testing mode, Google may ask you to sign in again about once a week.</li></ol></details></div>
+ <div class="card"><h2>Passcode lock</h2><p class="mute">Adds a lock screen when you open the app. It is a convenience lock stored with your data, not strong encryption, and it is included in backups.</p><div class="row"><input type="password" id="np" placeholder="${S.lock?'New passcode':'Choose a passcode'}" autocomplete="new-password"><button class="b p" data-setpw>${S.lock?'Change':'Set'} passcode</button>${S.lock?'<button class="b" data-lock>Lock now</button><button class="b x" data-rmpw>Remove</button>':''}</div><p id="npe" class="bad"></p></div>
+ <div class="card"><h2>Backup &amp; restore</h2><p class="mute">Save your whole budget as a text file, or copy it as text. To restore, paste the text into the box or choose a .txt file, then press Restore.</p><textarea id="bk" rows="8" spellcheck="false" placeholder="Backup text appears here. Paste a backup here to restore it." style="width:100%;font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;padding:8px;border:1px solid var(--line);border-radius:7px;background:var(--card);color:var(--ink)"></textarea><div class="row" style="margin-top:8px"><button class="b p" data-bksave>Save as .txt…</button><button class="b" data-bkshow>Show &amp; copy text</button><button class="b" data-bkpick>Choose .txt file…</button><button class="b" data-bkrestore>Restore from text</button><input type="file" id="bkfile" accept=".txt,.json,text/plain" hidden></div><p id="bkm" class="mute" role="status"></p><div class="row"><button class="b x" data-reset>Reset everything</button></div></div>`}
+
+function led(){const rows=[...S.tx].sort((a,b)=>b.date.localeCompare(a.date));
+ return `<div class="card"><h2>Ledger</h2>${rows.length?`<div class="wrap"><table><tr><th>Date</th><th>What</th><th>Envelope</th><th>Account</th><th class="n">Amount</th><th></th></tr>${rows.map(t=>`<tr><td>${t.date}</td><td>${esc(t.desc||'')}</td><td>${t.type=='transfer'?'<span class="mute">Transfer</span>':esc((t.ws?S.ws[t.ws].name+bdName(t)+' · ':'')+t.bucket)}</td><td>${esc(aname(t.a))}${t.type=='transfer'?' → '+esc(aname(t.to)):''}</td><td class="n ${t.type=='expense'?'bad':''}">${t.type=='expense'?'−':t.type=='transfer'?'':'+'}${money(t.amt).replace('−','')}</td><td><button class="b x" data-delt="${t.id}" aria-label="Delete">×</button></td></tr>`).join('')}</table></div>`:'<div class="empty">Nothing logged yet. Add your first paycheck from the Add money tab.</div>'}</div>`}
+
+function saveTx(){const amt=+f.amt;if(!(amt>0))return alert('Enter an amount greater than zero.');const date=f.date||today(),desc=f.desc||'';
+ if(type=='income'){const g=uid();allocate(f.ws,amt).forEach(r=>S.tx.push({id:uid(),g,date,desc,type:'income',ws:f.ws,bd:WB(f.ws).id,bucket:r.bucket,a:r.a,amt:r.amt}))}
+ else if(type=='expense')S.tx.push({id:uid(),date,desc,type:'expense',ws:f.ws,bd:WB(f.ws).id,bucket:f.bucket,a:f.a,amt:r2(amt)});
+ else{if(f.a==f.to)return alert('Choose two different accounts.');S.tx.push({id:uid(),date,desc,type:'transfer',a:f.a,to:f.to,amt:r2(amt)})}
+ save();f={ws:f.ws,date,a:f.a,to:f.to};tab='led';render()}
+
+document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;const d=t.dataset;
+ if(d.tab){tab=d.tab;return render()}
+ if(d.type){type=d.type;return render()}
+ if(d.sw){const p=d.sw.split('|');S.ws[p[0]].cur=p[1];save();return render()}
+ if('save' in d)return saveTx();
+ if('gcon' in d||'gnow' in d){gconnect();return}
+ if('gdis' in d){gdisc();return render()}
+ if('bkshow' in d){const t=$('#bk');t.value=backupText();t.select();const m=$('#bkm');(navigator.clipboard?navigator.clipboard.writeText(t.value):Promise.reject()).then(()=>m.textContent='Backup text is shown above and copied.').catch(()=>m.textContent='Backup text is shown above. Select it and copy.');return}
+ if('bksave' in d){saveTxt();return}
+ if('bkpick' in d){$('#bkfile').click();return}
+ if('bkrestore' in d){restoreTxt();return}
+ if('unlock' in d){hash($('#pw').value,S.lock.salt).then(h=>{if(h==S.lock.hash){unlocked=true;render()}else $('#pwe').textContent='Wrong passcode.'}).catch(()=>{$('#pwe').textContent='Could not check passcode here.'});return}
+ if('setpw' in d){const p=$('#np').value;if(p.length<6){$('#npe').textContent='Use at least 6 characters.';return}const salt=uid()+uid();hash(p,salt).then(h=>{S.lock={salt,hash:h};unlocked=true;save();render()}).catch(()=>{$('#npe').textContent='Passcodes are not available in this browser.'});return}
+ if('rmpw' in d){delete S.lock;save();return render()}
+ if('lock' in d){unlocked=false;return render()}
+ const bk=k=>{const[w,i]=k.split('|');return[w,WB(w).buckets.find(b=>b.id==i)]};
+ if(d.mvb){const p=d.mvb.split('|');const bs=WB(p[0]).buckets;mv(bs,bs.findIndex(x=>x.id==p[1]),+p[2])}
+ else if(d.mvs){const p=d.mvs.split('|');mv(WB(p[0]).buckets.find(x=>x.id==p[1]).splits,+p[2],+p[3])}
+ else if(d.mva){const p=d.mva.split('|');mv(S.accts,S.accts.findIndex(x=>x.id==p[0]),+p[1])}
+ else if(d.mvbd){const p=d.mvbd.split('|');const bs=S.ws[p[0]].budgets;mv(bs,bs.findIndex(x=>x.id==S.ws[p[0]].cur),+p[1])}
+ else if(d.addbd){const W=S.ws[d.addbd],c=WB(d.addbd),k=c.kind=='cash'?'online':'cash';const t=S.accts.find(a=>a.kind==k&&(a.ws==d.addbd||a.ws=='shared'))||S.accts.find(a=>a.kind==k)||S.accts[0];const nb={id:uid(),name:k=='cash'?'Cash':'Online',kind:k,buckets:c.buckets.map(b=>({id:uid(),name:b.name,pct:b.pct,splits:[{a:t.id,p:100}]}))};W.budgets.push(nb);W.cur=nb.id}
+ else if(d.delbd){const W=S.ws[d.delbd],c=WB(d.delbd);if(!confirm('Delete budget "'+c.name+'"? Its past transactions stay in the ledger.'))return;W.budgets=W.budgets.filter(x=>x!=c);W.cur=W.budgets[0].id}
+ else if(d.addb){const w=d.addb;WB(w).buckets.push({id:uid(),name:'New envelope',pct:0,splits:[{a:S.accts[0].id,p:100}]})}
+ else if(d.delb){const[w,b]=bk(d.delb);if(!confirm('Delete "'+b.name+'"? Past transactions stay in the ledger.'))return;WB(w).buckets=WB(w).buckets.filter(x=>x!=b)}
+ else if(d.adds){const[,b]=bk(d.adds);b.splits.push({a:S.accts[0].id,p:0})}
+ else if(d.dels){const p=d.dels.split('|');const[,b]=bk(p[0]+'|'+p[1]);b.splits.splice(+p[2],1)}
+ else if('adda' in d)S.accts.push({id:uid(),name:'New account',kind:'online',ws:'per',start:0});
+ else if(d.dela){const a=acct(d.dela);if(!confirm('Delete "'+a.name+'"? Transactions using it will show as (deleted).'))return;S.accts=S.accts.filter(x=>x!=a)}
+ else if(d.delt){S.tx=S.tx.filter(x=>x.id!=d.delt)}
+ else if('reset' in d){if(!confirm('Erase all data and start over?'))return;S=seed()}
+ else return;
+ save();render()});
+
+document.addEventListener('change',e=>{const el=e.target,d=el.dataset,v=el.value;
+ if('period' in d){period=v;return render()}
+ if('gcid' in d){G.cid=v.trim();try{localStorage.setItem('envelope-gcid',G.cid)}catch(e){}return}
+ if(el.id=='bkfile'){const fl=el.files[0];if(fl)fl.text().then(t=>{$('#bk').value=t;$('#bkm').textContent='Loaded '+fl.name+'. Press Restore from text to apply it.';pend=''});return}
+ if(d.f){f[d.f]=v;if(d.f=='ws'||el.tagName=='SELECT'&&type=='expense')return render();return preview()}
+ let k;
+ if((k=d.bn)){const[w,i]=k.split('|');WB(w).buckets.find(b=>b.id==i).name=v||'Unnamed'}
+ else if((k=d.bp)){const[w,i]=k.split('|');WB(w).buckets.find(b=>b.id==i).pct=Math.max(0,+v||0)}
+ else if((k=d.sa)||(k=d.sp)){const p=k.split('|');const s=WB(p[0]).buckets.find(b=>b.id==p[1]).splits[+p[2]];if(d.sa)s.a=v;else s.p=Math.max(0,+v||0)}
+ else if(d.wn)WB(d.wn).name=v||'Budget';
+ else if(d.wk)WB(d.wk).kind=v;
+ else if(d.an)acct(d.an).name=v||'Unnamed';
+ else if(d.ak)acct(d.ak).kind=v;
+ else if(d.aw)acct(d.aw).ws=v;
+ else if(d.as)acct(d.as).start=+v||0;
+ else return;
+ save();render()});
+document.addEventListener('input',e=>{const d=e.target.dataset;if(d.f&&e.target.tagName=='INPUT'){f[d.f]=e.target.value;if(d.f=='amt')preview()}});
+document.addEventListener('keydown',e=>{if(e.key=='Enter'&&e.target.id=='pw'){const b=document.querySelector('[data-unlock]');if(b)b.click()}});
+render();preview();gInit();
+</script></body></html>
